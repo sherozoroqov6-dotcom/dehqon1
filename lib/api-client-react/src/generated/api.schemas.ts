@@ -8,3 +8,71 @@
 export interface HealthStatus {
   status: string;
 }
+
+export interface BotStats {
+  totalUsers: number;
+  totalAnalyses: number;
+  todayAnalyses: number;
+  activeUsers7d: number;
+}
+
+export interface Analysis {
+  id: number;
+  userId: number;
+  telegramId: string;
+  username?: string | null;
+  firstName?: string | null;
+  imageUrl?: string | null;
+  analysisText: string;
+  diseaseDetected: boolean;
+  cropType?: string | null;
+  severity?: string | null;
+  createdAt: string;
+}
+
+export interface AnalysesList {
+  analyses: Analysis[];
+  total: number;
+}
+
+export interface BotUser {
+  id: number;
+  telegramId: string;
+  username?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  analysisCount: number;
+  createdAt: string;
+}
+
+export interface BotUsersList {
+  users: BotUser[];
+  total: number;
+}
+
+export interface RecentActivityItem {
+  id: number;
+  username?: string | null;
+  firstName?: string | null;
+  cropType?: string | null;
+  diseaseDetected: boolean;
+  severity?: string | null;
+  analysisText: string;
+  imageUrl?: string | null;
+  createdAt: string;
+}
+
+export interface RecentActivity {
+  items: RecentActivityItem[];
+}
+
+export type ListAnalysesParams = {
+  limit?: number;
+  offset?: number;
+  userId?: number;
+};
+
+export type ListBotUsersParams = {
+  limit?: number;
+  offset?: number;
+};

@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: bot
+    description: Telegram bot operations
 paths:
   /healthz:
     get:
@@ -24,6 +26,109 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /bot/stats:
+    get:
+      operationId: getBotStats
+      tags: [bot]
+      summary: Get bot statistics
+      description: Returns total users, total analyses, and today's analyses count
+      responses:
+        "200":
+          description: Bot stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BotStats"
+
+  /bot/analyses:
+    get:
+      operationId: listAnalyses
+      tags: [bot]
+      summary: List recent analyses
+      description: Returns paginated list of crop analyses
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: userId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of analyses
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysesList"
+
+  /bot/analyses/{id}:
+    get:
+      operationId: getAnalysis
+      tags: [bot]
+      summary: Get analysis by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Analysis detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Analysis"
+        "404":
+          description: Not found
+
+  /bot/users:
+    get:
+      operationId: listBotUsers
+      tags: [bot]
+      summary: List bot users
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: List of bot users
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BotUsersList"
+
+  /bot/recent-activity:
+    get:
+      operationId: getRecentActivity
+      tags: [bot]
+      summary: Get recent bot activity feed
+      description: Returns last 10 analyses with user info for dashboard feed
+      responses:
+        "200":
+          description: Recent activity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecentActivity"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +139,151 @@ components:
       required:
         - status
 
+    BotStats:
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+        totalAnalyses:
+          type: integer
+        todayAnalyses:
+          type: integer
+        activeUsers7d:
+          type: integer
+      required:
+        - totalUsers
+        - totalAnalyses
+        - todayAnalyses
+        - activeUsers7d
+
+    Analysis:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        telegramId:
+          type: string
+        username:
+          type: string
+          nullable: true
+        firstName:
+          type: string
+          nullable: true
+        imageUrl:
+          type: string
+          nullable: true
+        analysisText:
+          type: string
+        diseaseDetected:
+          type: boolean
+        cropType:
+          type: string
+          nullable: true
+        severity:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required:
+        - id
+        - userId
+        - telegramId
+        - analysisText
+        - diseaseDetected
+        - createdAt
+
+    AnalysesList:
+      type: object
+      properties:
+        analyses:
+          type: array
+          items:
+            $ref: "#/components/schemas/Analysis"
+        total:
+          type: integer
+      required:
+        - analyses
+        - total
+
+    BotUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        telegramId:
+          type: string
+        username:
+          type: string
+          nullable: true
+        firstName:
+          type: string
+          nullable: true
+        lastName:
+          type: string
+          nullable: true
+        analysisCount:
+          type: integer
+        createdAt:
+          type: string
+      required:
+        - id
+        - telegramId
+        - analysisCount
+        - createdAt
+
+    BotUsersList:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/BotUser"
+        total:
+          type: integer
+      required:
+        - users
+        - total
+
+    RecentActivityItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+          nullable: true
+        firstName:
+          type: string
+          nullable: true
+        cropType:
+          type: string
+          nullable: true
+        diseaseDetected:
+          type: boolean
+        severity:
+          type: string
+          nullable: true
+        analysisText:
+          type: string
+        imageUrl:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required:
+        - id
+        - diseaseDetected
+        - analysisText
+        - createdAt
+
+    RecentActivity:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecentActivityItem"
+      required:
+        - items

@@ -6,4 +6,13 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./analysesList";
+export * from "./analysis";
+export * from "./botStats";
+export * from "./botUser";
+export * from "./botUsersList";
 export * from "./healthStatus";
+export * from "./listAnalysesParams";
+export * from "./listBotUsersParams";
+export * from "./recentActivity";
+export * from "./recentActivityItem";

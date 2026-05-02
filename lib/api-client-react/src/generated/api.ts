@@ -13,7 +13,16 @@ import type {
   UseQueryResult,
 } from "@tanstack/react-query";
 
-import type { HealthStatus } from "./api.schemas";
+import type {
+  AnalysesList,
+  Analysis,
+  BotStats,
+  BotUsersList,
+  HealthStatus,
+  ListAnalysesParams,
+  ListBotUsersParams,
+  RecentActivity,
+} from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
 import type { ErrorType } from "../custom-fetch";
@@ -92,6 +101,432 @@ export function useHealthCheck<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getHealthCheckQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Returns total users, total analyses, and today's analyses count
+ * @summary Get bot statistics
+ */
+export const getGetBotStatsUrl = () => {
+  return `/api/bot/stats`;
+};
+
+export const getBotStats = async (options?: RequestInit): Promise<BotStats> => {
+  return customFetch<BotStats>(getGetBotStatsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetBotStatsQueryKey = () => {
+  return [`/api/bot/stats`] as const;
+};
+
+export const getGetBotStatsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getBotStats>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getBotStats>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetBotStatsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getBotStats>>> = ({
+    signal,
+  }) => getBotStats({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getBotStats>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetBotStatsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getBotStats>>
+>;
+export type GetBotStatsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get bot statistics
+ */
+
+export function useGetBotStats<
+  TData = Awaited<ReturnType<typeof getBotStats>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getBotStats>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetBotStatsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Returns paginated list of crop analyses
+ * @summary List recent analyses
+ */
+export const getListAnalysesUrl = (params?: ListAnalysesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/bot/analyses?${stringifiedParams}`
+    : `/api/bot/analyses`;
+};
+
+export const listAnalyses = async (
+  params?: ListAnalysesParams,
+  options?: RequestInit,
+): Promise<AnalysesList> => {
+  return customFetch<AnalysesList>(getListAnalysesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListAnalysesQueryKey = (params?: ListAnalysesParams) => {
+  return [`/api/bot/analyses`, ...(params ? [params] : [])] as const;
+};
+
+export const getListAnalysesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listAnalyses>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListAnalysesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listAnalyses>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListAnalysesQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listAnalyses>>> = ({
+    signal,
+  }) => listAnalyses(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listAnalyses>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListAnalysesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listAnalyses>>
+>;
+export type ListAnalysesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List recent analyses
+ */
+
+export function useListAnalyses<
+  TData = Awaited<ReturnType<typeof listAnalyses>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListAnalysesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listAnalyses>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListAnalysesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get analysis by ID
+ */
+export const getGetAnalysisUrl = (id: number) => {
+  return `/api/bot/analyses/${id}`;
+};
+
+export const getAnalysis = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Analysis> => {
+  return customFetch<Analysis>(getGetAnalysisUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAnalysisQueryKey = (id: number) => {
+  return [`/api/bot/analyses/${id}`] as const;
+};
+
+export const getGetAnalysisQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAnalysis>>,
+  TError = ErrorType<void>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAnalysis>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAnalysisQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAnalysis>>> = ({
+    signal,
+  }) => getAnalysis(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAnalysis>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAnalysisQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAnalysis>>
+>;
+export type GetAnalysisQueryError = ErrorType<void>;
+
+/**
+ * @summary Get analysis by ID
+ */
+
+export function useGetAnalysis<
+  TData = Awaited<ReturnType<typeof getAnalysis>>,
+  TError = ErrorType<void>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAnalysis>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAnalysisQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List bot users
+ */
+export const getListBotUsersUrl = (params?: ListBotUsersParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/bot/users?${stringifiedParams}`
+    : `/api/bot/users`;
+};
+
+export const listBotUsers = async (
+  params?: ListBotUsersParams,
+  options?: RequestInit,
+): Promise<BotUsersList> => {
+  return customFetch<BotUsersList>(getListBotUsersUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListBotUsersQueryKey = (params?: ListBotUsersParams) => {
+  return [`/api/bot/users`, ...(params ? [params] : [])] as const;
+};
+
+export const getListBotUsersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listBotUsers>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListBotUsersParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listBotUsers>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListBotUsersQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listBotUsers>>> = ({
+    signal,
+  }) => listBotUsers(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listBotUsers>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListBotUsersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listBotUsers>>
+>;
+export type ListBotUsersQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List bot users
+ */
+
+export function useListBotUsers<
+  TData = Awaited<ReturnType<typeof listBotUsers>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListBotUsersParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listBotUsers>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListBotUsersQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Returns last 10 analyses with user info for dashboard feed
+ * @summary Get recent bot activity feed
+ */
+export const getGetRecentActivityUrl = () => {
+  return `/api/bot/recent-activity`;
+};
+
+export const getRecentActivity = async (
+  options?: RequestInit,
+): Promise<RecentActivity> => {
+  return customFetch<RecentActivity>(getGetRecentActivityUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetRecentActivityQueryKey = () => {
+  return [`/api/bot/recent-activity`] as const;
+};
+
+export const getGetRecentActivityQueryOptions = <
+  TData = Awaited<ReturnType<typeof getRecentActivity>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getRecentActivity>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetRecentActivityQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getRecentActivity>>
+  > = ({ signal }) => getRecentActivity({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getRecentActivity>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetRecentActivityQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getRecentActivity>>
+>;
+export type GetRecentActivityQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get recent bot activity feed
+ */
+
+export function useGetRecentActivity<
+  TData = Awaited<ReturnType<typeof getRecentActivity>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getRecentActivity>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetRecentActivityQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

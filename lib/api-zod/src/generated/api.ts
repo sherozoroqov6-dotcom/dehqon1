@@ -14,3 +14,113 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * Returns total users, total analyses, and today's analyses count
+ * @summary Get bot statistics
+ */
+export const GetBotStatsResponse = zod.object({
+  totalUsers: zod.number(),
+  totalAnalyses: zod.number(),
+  todayAnalyses: zod.number(),
+  activeUsers7d: zod.number(),
+});
+
+/**
+ * Returns paginated list of crop analyses
+ * @summary List recent analyses
+ */
+export const listAnalysesQueryLimitDefault = 20;
+export const listAnalysesQueryOffsetDefault = 0;
+
+export const ListAnalysesQueryParams = zod.object({
+  limit: zod.coerce.number().default(listAnalysesQueryLimitDefault),
+  offset: zod.coerce.number().default(listAnalysesQueryOffsetDefault),
+  userId: zod.coerce.number().optional(),
+});
+
+export const ListAnalysesResponse = zod.object({
+  analyses: zod.array(
+    zod.object({
+      id: zod.number(),
+      userId: zod.number(),
+      telegramId: zod.string(),
+      username: zod.string().nullish(),
+      firstName: zod.string().nullish(),
+      imageUrl: zod.string().nullish(),
+      analysisText: zod.string(),
+      diseaseDetected: zod.boolean(),
+      cropType: zod.string().nullish(),
+      severity: zod.string().nullish(),
+      createdAt: zod.string(),
+    }),
+  ),
+  total: zod.number(),
+});
+
+/**
+ * @summary Get analysis by ID
+ */
+export const GetAnalysisParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetAnalysisResponse = zod.object({
+  id: zod.number(),
+  userId: zod.number(),
+  telegramId: zod.string(),
+  username: zod.string().nullish(),
+  firstName: zod.string().nullish(),
+  imageUrl: zod.string().nullish(),
+  analysisText: zod.string(),
+  diseaseDetected: zod.boolean(),
+  cropType: zod.string().nullish(),
+  severity: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary List bot users
+ */
+export const listBotUsersQueryLimitDefault = 50;
+export const listBotUsersQueryOffsetDefault = 0;
+
+export const ListBotUsersQueryParams = zod.object({
+  limit: zod.coerce.number().default(listBotUsersQueryLimitDefault),
+  offset: zod.coerce.number().default(listBotUsersQueryOffsetDefault),
+});
+
+export const ListBotUsersResponse = zod.object({
+  users: zod.array(
+    zod.object({
+      id: zod.number(),
+      telegramId: zod.string(),
+      username: zod.string().nullish(),
+      firstName: zod.string().nullish(),
+      lastName: zod.string().nullish(),
+      analysisCount: zod.number(),
+      createdAt: zod.string(),
+    }),
+  ),
+  total: zod.number(),
+});
+
+/**
+ * Returns last 10 analyses with user info for dashboard feed
+ * @summary Get recent bot activity feed
+ */
+export const GetRecentActivityResponse = zod.object({
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      username: zod.string().nullish(),
+      firstName: zod.string().nullish(),
+      cropType: zod.string().nullish(),
+      diseaseDetected: zod.boolean(),
+      severity: zod.string().nullish(),
+      analysisText: zod.string(),
+      imageUrl: zod.string().nullish(),
+      createdAt: zod.string(),
+    }),
+  ),
+});
