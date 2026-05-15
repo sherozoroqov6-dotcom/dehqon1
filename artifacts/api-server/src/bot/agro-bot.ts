@@ -49,8 +49,8 @@ async function analyzeImageWithAI(imageBuffer: Buffer): Promise<{
   const base64Image = imageBuffer.toString("base64");
 
   const response = await openai.chat.completions.create({
-    model: "gpt-5.4",
-    max_completion_tokens: 1024,
+    model: "gpt-4o",
+    max_tokens: 1024,
     messages: [
       {
         role: "system",
@@ -122,7 +122,7 @@ Javobni FAQAT JSON formatida bering:
       const severityMap: Record<string, string> = {
         yengil: "🟡 Yengil",
         "o'rtacha": "🟠 O'rtacha",
-        og_ir: "🔴 Og'ir",
+        "og'ir": "🔴 Og'ir",
       };
       analysisText += `📊 *Darajasi:* ${severityMap[severity] ?? severity}\n`;
     }
@@ -147,8 +147,8 @@ Javobni FAQAT JSON formatida bering:
 
 async function analyzeTextWithAI(question: string): Promise<string> {
   const response = await openai.chat.completions.create({
-    model: "gpt-5.4",
-    max_completion_tokens: 800,
+    model: "gpt-4o-mini",
+    max_tokens: 800,
     messages: [
       {
         role: "system",

@@ -1,29 +1,28 @@
 services:
-    - type: web
-      name: dehqon-bot
-      runtime: node
-      plan: free
-      buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm run typecheck:libs && pnpm --filter @workspace/api-server run build
-      startCommand: node artifacts/api-server/dist/index.mjs
-      envVars:
-        - key: NODE_ENV
-          value: production
-        - key: PORT
-          value: 10000
-        - key: DATABASE_URL
-          fromDatabase:
-            name: dehqon-db
-            property: connectionString
-        - key: TELEGRAM_BOT_TOKEN
-          sync: false
-        - key: AI_INTEGRATIONS_OPENAI_API_KEY
-          sync: false
-        - key: AI_INTEGRATIONS_OPENAI_BASE_URL
-          value: https://api.openai.com/v1
+  - type: web
+    name: dehqon-bot
+    runtime: node
+    plan: free
+    buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm run typecheck:libs && pnpm --filter @workspace/api-server run build
+    startCommand: node artifacts/api-server/dist/index.mjs
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dehqon-db
+          property: connectionString
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: AI_INTEGRATIONS_OPENAI_API_KEY
+        sync: false
+      - key: AI_INTEGRATIONS_OPENAI_BASE_URL
+        value: https://api.openai.com/v1
 
-  databases:
-    - name: dehqon-db
-      plan: free
-      databaseName: dehqon_db
-      user: dehqon_user
-  
+databases:
+  - name: dehqon-db
+    plan: free
+    databaseName: dehqon_db
+    user: dehqon_user
