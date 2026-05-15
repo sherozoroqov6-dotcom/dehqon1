@@ -3,7 +3,7 @@ services:
     name: dehqon-bot
     runtime: node
     plan: free
-    buildCommand: pnpm install && pnpm --filter @workspace/api-server run build
+    buildCommand: npm install googleapis --no-save --ignore-scripts
     startCommand: node artifacts/api-server/dist/index.mjs
     envVars:
       - key: NODE_ENV
