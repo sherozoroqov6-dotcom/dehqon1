@@ -79019,7 +79019,7 @@ var OpenAI = class {
    * @param {Record<string, string | undefined>} opts.defaultQuery - Default query parameters to include with every request to the API.
    * @param {boolean} [opts.dangerouslyAllowBrowser=false] - By default, client-side use of this library is not allowed, as it risks exposing your secret API credentials to attackers.
    */
-  constructor({ baseURL: baseURL2 = readEnv("OPENAI_BASE_URL"), apiKey: apiKey2 = readEnv("OPENAI_API_KEY") ?? null, adminAPIKey = readEnv("OPENAI_ADMIN_KEY") ?? null, organization = readEnv("OPENAI_ORG_ID") ?? null, project = readEnv("OPENAI_PROJECT_ID") ?? null, webhookSecret = readEnv("OPENAI_WEBHOOK_SECRET") ?? null, workloadIdentity, ...opts } = {}) {
+  constructor({ baseURL: baseURL3 = readEnv("OPENAI_BASE_URL"), apiKey: apiKey3 = readEnv("OPENAI_API_KEY") ?? null, adminAPIKey = readEnv("OPENAI_ADMIN_KEY") ?? null, organization = readEnv("OPENAI_ORG_ID") ?? null, project = readEnv("OPENAI_PROJECT_ID") ?? null, webhookSecret = readEnv("OPENAI_WEBHOOK_SECRET") ?? null, workloadIdentity, ...opts } = {}) {
     _OpenAI_instances.add(this);
     _OpenAI_encoder.set(this, void 0);
     this.completions = new Completions2(this);
@@ -79046,19 +79046,19 @@ var OpenAI = class {
     this.skills = new Skills(this);
     this.videos = new Videos(this);
     const options = {
-      apiKey: apiKey2,
+      apiKey: apiKey3,
       adminAPIKey,
       organization,
       project,
       webhookSecret,
       workloadIdentity,
       ...opts,
-      baseURL: baseURL2 || `https://api.openai.com/v1`
+      baseURL: baseURL3 || `https://api.openai.com/v1`
     };
-    if (apiKey2 && workloadIdentity) {
+    if (apiKey3 && workloadIdentity) {
       throw new OpenAIError("The `apiKey` and `workloadIdentity` options are mutually exclusive");
     }
-    if (!apiKey2 && !adminAPIKey && !workloadIdentity) {
+    if (!apiKey3 && !adminAPIKey && !workloadIdentity) {
       throw new OpenAIError("Missing credentials. Please pass an `apiKey`, `workloadIdentity`, `adminAPIKey`, or set the `OPENAI_API_KEY` or `OPENAI_ADMIN_KEY` environment variable.");
     }
     if (!options.dangerouslyAllowBrowser && isRunningInBrowser()) {
@@ -79089,7 +79089,7 @@ var OpenAI = class {
     if (workloadIdentity) {
       this._workloadIdentityAuth = new WorkloadIdentityAuth(workloadIdentity, this.fetch);
     }
-    this.apiKey = typeof apiKey2 === "string" ? apiKey2 : null;
+    this.apiKey = typeof apiKey3 === "string" ? apiKey3 : null;
     this.adminAPIKey = adminAPIKey;
     this.organization = organization;
     this.project = project;
@@ -79173,12 +79173,12 @@ var OpenAI = class {
     return APIError.generate(status, error40, message2, headers);
   }
   async _callApiKey() {
-    const apiKey2 = this._options.apiKey;
-    if (typeof apiKey2 !== "function")
+    const apiKey3 = this._options.apiKey;
+    if (typeof apiKey3 !== "function")
       return false;
     let token;
     try {
-      token = await apiKey2();
+      token = await apiKey3();
     } catch (err) {
       if (err instanceof OpenAIError)
         throw err;
@@ -79195,8 +79195,8 @@ var OpenAI = class {
     return true;
   }
   buildURL(path2, query, defaultBaseURL) {
-    const baseURL2 = !__classPrivateFieldGet(this, _OpenAI_instances, "m", _OpenAI_baseURLOverridden).call(this) && defaultBaseURL || this.baseURL;
-    const url2 = isAbsoluteURL(path2) ? new URL(path2) : new URL(baseURL2 + (baseURL2.endsWith("/") && path2.startsWith("/") ? path2.slice(1) : path2));
+    const baseURL3 = !__classPrivateFieldGet(this, _OpenAI_instances, "m", _OpenAI_baseURLOverridden).call(this) && defaultBaseURL || this.baseURL;
+    const url2 = isAbsoluteURL(path2) ? new URL(path2) : new URL(baseURL3 + (baseURL3.endsWith("/") && path2.startsWith("/") ? path2.slice(1) : path2));
     const defaultQuery = this.defaultQuery();
     const pathQuery = Object.fromEntries(url2.searchParams);
     if (!isEmptyObj(defaultQuery) || !isEmptyObj(pathQuery)) {
@@ -79597,20 +79597,14 @@ if (!apiKey) {
 var openai = new OpenAI({ apiKey, baseURL });
 
 // ../../lib/integrations-openai-ai-server/src/image/client.ts
-if (!process.env.AI_INTEGRATIONS_OPENAI_BASE_URL) {
+var apiKey2 = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+var baseURL2 = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || "https://api.openai.com/v1";
+if (!apiKey2) {
   throw new Error(
-    "AI_INTEGRATIONS_OPENAI_BASE_URL must be set. Did you forget to provision the OpenAI AI integration?"
+    "OPENAI_API_KEY (or AI_INTEGRATIONS_OPENAI_API_KEY) must be set."
   );
 }
-if (!process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
-  throw new Error(
-    "AI_INTEGRATIONS_OPENAI_API_KEY must be set. Did you forget to provision the OpenAI AI integration?"
-  );
-}
-var openai2 = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL
-});
+var openai2 = new OpenAI({ apiKey: apiKey2, baseURL: baseURL2 });
 
 // ../../node_modules/.pnpm/node-fetch@3.3.2/node_modules/node-fetch/src/index.js
 import http2 from "node:http";
