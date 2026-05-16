@@ -16,10 +16,8 @@ services:
           property: connectionString
       - key: TELEGRAM_BOT_TOKEN
         sync: false
-      - key: AI_INTEGRATIONS_OPENAI_API_KEY
+      - key: OPENAI_API_KEY
         sync: false
-      - key: AI_INTEGRATIONS_OPENAI_BASE_URL
-        value: https://api.openai.com/v1
 
 databases:
   - name: dehqon-db
