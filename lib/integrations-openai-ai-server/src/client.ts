@@ -10,15 +10,13 @@ if (!apiKey) {
   );
 }
 
-// Auto-detect Groq keys (start with gsk_) and use Groq base URL
+// Groq kalitlari (gsk_) uchun har doim Groq URL ishlatiladi
 const isGroqKey = apiKey.startsWith("gsk_");
-const defaultBaseURL = isGroqKey
+const baseURL = isGroqKey
   ? "https://api.groq.com/openai/v1"
-  : "https://api.openai.com/v1";
-
-const baseURL =
-  process.env.AI_INTEGRATIONS_OPENAI_BASE_URL ||
-  process.env.OPENAI_BASE_URL ||
-  defaultBaseURL;
+  : (process.env.AI_INTEGRATIONS_OPENAI_BASE_URL ||
+     process.env.OPENAI_BASE_URL ||
+     "https://api.openai.com/v1");
 
 export const openai = new OpenAI({ apiKey, baseURL });
+

@@ -2,27 +2,24 @@ import fs from "node:fs";
 import OpenAI, { toFile } from "openai";
 import { Buffer } from "node:buffer";
 
-const apiKey =
+const apiKey2 =
   process.env.OPENAI_API_KEY ||
   process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
 
-if (!apiKey) {
+if (!apiKey2) {
   throw new Error(
     "OPENAI_API_KEY (or AI_INTEGRATIONS_OPENAI_API_KEY) must be set.",
   );
 }
 
-const isGroqKey = apiKey.startsWith("gsk_");
-const defaultBaseURL = isGroqKey
+const isGroqKey2 = apiKey2.startsWith("gsk_");
+const baseURL2 = isGroqKey2
   ? "https://api.groq.com/openai/v1"
-  : "https://api.openai.com/v1";
+  : (process.env.AI_INTEGRATIONS_OPENAI_BASE_URL ||
+     process.env.OPENAI_BASE_URL ||
+     "https://api.openai.com/v1");
 
-const baseURL =
-  process.env.AI_INTEGRATIONS_OPENAI_BASE_URL ||
-  process.env.OPENAI_BASE_URL ||
-  defaultBaseURL;
-
-export const openai = new OpenAI({ apiKey, baseURL });
+export const openai = new OpenAI({ apiKey: apiKey2, baseURL: baseURL2 });
 
 export async function generateImageBuffer(
   prompt: string,
