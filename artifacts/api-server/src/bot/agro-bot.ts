@@ -15,8 +15,23 @@ if (!BOT_TOKEN) {
 
 export const bot = new Telegraf(BOT_TOKEN);
 
+// Groq-compatible vision model (supports image_url)
+const VISION_MODEL = process.env.VISION_MODEL ?? "meta-llama/llama-4-scout-17b-16e-instruct";
+// Groq-compatible text model
+const TEXT_MODEL = process.env.TEXT_MODEL ?? "llama-3.1-8b-instant";
+
+async function safeSendMarkdown(ctx: Context & { reply: (text: string) => Promise<unknown>; replyWithMarkdown: (text: string) => Promise<unknown> }, text: string) {
+  try {
+    await ctx.replyWithMarkdown(text);
+  } catch {
+    // Strip markdown symbols and send as plain text
+    const plain = text.replace(/[*_`\[\]]/g, "");
+    await ctx.reply(plain);
+  }
+}
+
 async function getOrCreateUser(ctx: Context) {
-  if (!db) return null; // DB mavjud emas — skip
+  if (!db) return null;
   const from = ctx.from;
   if (!from) return null;
 
@@ -55,7 +70,7 @@ async function analyzeImageWithAI(imageBuffer: Buffer): Promise<{
   const base64Image = imageBuffer.toString("base64");
 
   const response = await openai.chat.completions.create({
-    model: "gpt-4o",
+    model: VISION_MODEL,
     max_tokens: 1024,
     messages: [
       {
@@ -117,27 +132,27 @@ Javobni FAQAT JSON formatida bering:
 
   let analysisText = "";
   if (parsed.diagnosis) {
-    analysisText += `📋 *Tashxis:* ${parsed.diagnosis}\n\n`;
+    analysisText += `Tashxis: ${parsed.diagnosis}\n\n`;
   }
   if (parsed.cropType) {
-    analysisText += `🌱 *Ekin turi:* ${parsed.cropType}\n`;
+    analysisText += `Ekin turi: ${parsed.cropType}\n`;
   }
   if (diseaseDetected) {
-    analysisText += `⚠️ *Kasallik aniqlandi:* Ha\n`;
+    analysisText += `Kasallik aniqlandi: Ha\n`;
     if (severity) {
       const severityMap: Record<string, string> = {
-        yengil: "🟡 Yengil",
-        "o'rtacha": "🟠 O'rtacha",
-        "og'ir": "🔴 Og'ir",
+        yengil: "Yengil",
+        "o'rtacha": "O'rtacha",
+        "og'ir": "Og'ir",
       };
-      analysisText += `📊 *Darajasi:* ${severityMap[severity] ?? severity}\n`;
+      analysisText += `Darajasi: ${severityMap[severity] ?? severity}\n`;
     }
   } else {
-    analysisText += `✅ *Kasallik:* Aniqlanmadi\n`;
+    analysisText += `Kasallik: Aniqlanmadi\n`;
   }
 
   if (parsed.recommendations && parsed.recommendations.length > 0) {
-    analysisText += `\n💡 *Tavsiyalar:*\n`;
+    analysisText += `\nTavsiyalar:\n`;
     parsed.recommendations.forEach((rec, i) => {
       analysisText += `${i + 1}. ${rec}\n`;
     });
@@ -153,7 +168,7 @@ Javobni FAQAT JSON formatida bering:
 
 async function analyzeTextWithAI(question: string): Promise<string> {
   const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: TEXT_MODEL,
     max_tokens: 800,
     messages: [
       {
@@ -176,29 +191,29 @@ bot.start(async (ctx) => {
   } catch (err) {
     logger.warn({ err }, "getOrCreateUser failed in /start — continuing");
   }
-  await ctx.replyWithMarkdown(
-    `🌾 *AI Agronom Botiga xush kelibsiz!*\n\n` +
-      `Men sizga qishloq xo'jaligi bo'yicha yordam beraman:\n\n` +
-      `📸 *Rasm tahlili* — O'simlik rasmini yuboring, kasallik va muammolarni aniqlayman\n` +
-      `💬 *Savol-javob* — Qishloq xo'jaligi bo'yicha istalgan savolga javob beraman\n\n` +
-      `Boshlash uchun rasm yuboring yoki savol yozing! 🌱`,
+  await ctx.reply(
+    "🌾 AI Agronom Botiga xush kelibsiz!\n\n" +
+      "Men sizga qishloq xo'jaligi bo'yicha yordam beraman:\n\n" +
+      "📸 Rasm tahlili — O'simlik rasmini yuboring, kasallik va muammolarni aniqlayman\n" +
+      "💬 Savol-javob — Qishloq xo'jaligi bo'yicha istalgan savolga javob beraman\n\n" +
+      "Boshlash uchun rasm yuboring yoki savol yozing! 🌱",
   );
 });
 
 bot.help(async (ctx) => {
-  await ctx.replyWithMarkdown(
-    `🌾 *AI Agronom Bot — Yordam*\n\n` +
-      `*Buyruqlar:*\n` +
-      `/start — Botni ishga tushirish\n` +
-      `/help — Yordam\n\n` +
-      `*Foydalanish:*\n` +
-      `• 📸 O'simlik rasmini yuboring — kasallik tahlili\n` +
-      `• 💬 Savol yozing — maslahat oling\n\n` +
-      `*Tahlil qilinadigan narsalar:*\n` +
-      `• Kasalliklar va zararkunandalar\n` +
-      `• Ekin holati va sog'lig'i\n` +
-      `• Tuproq va suv muammolari\n` +
-      `• O'g'it va parvarish tavsiylari`,
+  await ctx.reply(
+    "🌾 AI Agronom Bot — Yordam\n\n" +
+      "Buyruqlar:\n" +
+      "/start — Botni ishga tushirish\n" +
+      "/help — Yordam\n\n" +
+      "Foydalanish:\n" +
+      "📸 O'simlik rasmini yuboring — kasallik tahlili\n" +
+      "💬 Savol yozing — maslahat oling\n\n" +
+      "Tahlil qilinadigan narsalar:\n" +
+      "• Kasalliklar va zararkunandalar\n" +
+      "• Ekin holati va sog'lig'i\n" +
+      "• Tuproq va suv muammolari\n" +
+      "• O'g'it va parvarish tavsiylari",
   );
 });
 
@@ -238,9 +253,8 @@ bot.on(message("photo"), async (ctx) => {
     }
 
     await ctx.telegram.deleteMessage(ctx.chat.id, processingMsg.message_id);
-    await ctx.replyWithMarkdown(
-      `🔬 *Tahlil natijalari:*\n\n${result.analysisText}\n\n` +
-        `---\n_Yana rasm yuboring yoki savol bering_ 🌱`,
+    await ctx.reply(
+      "🔬 Tahlil natijalari:\n\n" + result.analysisText + "\n---\nYana rasm yuboring yoki savol bering 🌱",
     );
   } catch (err) {
     logger.error({ err }, "Image analysis error");
@@ -264,7 +278,7 @@ bot.on(message("text"), async (ctx) => {
   try {
     const answer = await analyzeTextWithAI(text);
     await ctx.telegram.deleteMessage(ctx.chat.id, processingMsg.message_id);
-    await ctx.replyWithMarkdown(answer);
+    await ctx.reply(answer);
   } catch (err) {
     logger.error({ err }, "Text analysis error");
     try { await ctx.telegram.deleteMessage(ctx.chat.id, processingMsg.message_id); } catch {}
