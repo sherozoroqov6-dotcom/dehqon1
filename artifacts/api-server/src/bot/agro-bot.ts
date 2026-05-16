@@ -16,28 +16,34 @@ if (!BOT_TOKEN) {
 export const bot = new Telegraf(BOT_TOKEN);
 
 async function getOrCreateUser(ctx: Context) {
+  if (!db) return null; // DB mavjud emas — skip
   const from = ctx.from;
   if (!from) return null;
 
-  const existing = await db
-    .select()
-    .from(botUsersTable)
-    .where(eq(botUsersTable.telegramId, from.id))
-    .limit(1);
+  try {
+    const existing = await db
+      .select()
+      .from(botUsersTable)
+      .where(eq(botUsersTable.telegramId, from.id))
+      .limit(1);
 
-  if (existing.length > 0) return existing[0];
+    if (existing.length > 0) return existing[0];
 
-  const [created] = await db
-    .insert(botUsersTable)
-    .values({
-      telegramId: from.id,
-      username: from.username ?? null,
-      firstName: from.first_name ?? null,
-      lastName: from.last_name ?? null,
-    })
-    .returning();
+    const [created] = await db
+      .insert(botUsersTable)
+      .values({
+        telegramId: from.id,
+        username: from.username ?? null,
+        firstName: from.first_name ?? null,
+        lastName: from.last_name ?? null,
+      })
+      .returning();
 
-  return created;
+    return created;
+  } catch (err) {
+    logger.warn({ err }, "DB error in getOrCreateUser — continuing without user record");
+    return null;
+  }
 }
 
 async function analyzeImageWithAI(imageBuffer: Buffer): Promise<{
@@ -165,7 +171,11 @@ async function analyzeTextWithAI(question: string): Promise<string> {
 }
 
 bot.start(async (ctx) => {
-  await getOrCreateUser(ctx);
+  try {
+    await getOrCreateUser(ctx);
+  } catch (err) {
+    logger.warn({ err }, "getOrCreateUser failed in /start — continuing");
+  }
   await ctx.replyWithMarkdown(
     `🌾 *AI Agronom Botiga xush kelibsiz!*\n\n` +
       `Men sizga qishloq xo'jaligi bo'yicha yordam beraman:\n\n` +
@@ -193,10 +203,11 @@ bot.help(async (ctx) => {
 });
 
 bot.on(message("photo"), async (ctx) => {
-  const user = await getOrCreateUser(ctx);
-  if (!user) {
-    await ctx.reply("Xato yuz berdi. Iltimos, qaytadan urinib ko'ring.");
-    return;
+  let user = null;
+  try {
+    user = await getOrCreateUser(ctx);
+  } catch (err) {
+    logger.warn({ err }, "getOrCreateUser failed in photo handler");
   }
 
   const processingMsg = await ctx.reply("⏳ Rasm tahlil qilinmoqda, iltimos kuting...");
@@ -211,14 +222,20 @@ bot.on(message("photo"), async (ctx) => {
 
     const result = await analyzeImageWithAI(imageBuffer);
 
-    await db.insert(analysesTable).values({
-      userId: user.id,
-      imageUrl: fileLink.href,
-      analysisText: result.analysisText,
-      diseaseDetected: result.diseaseDetected,
-      cropType: result.cropType,
-      severity: result.severity,
-    });
+    if (db && user) {
+      try {
+        await db.insert(analysesTable).values({
+          userId: user.id,
+          imageUrl: fileLink.href,
+          analysisText: result.analysisText,
+          diseaseDetected: result.diseaseDetected,
+          cropType: result.cropType,
+          severity: result.severity,
+        });
+      } catch (err) {
+        logger.warn({ err }, "Failed to save analysis to DB");
+      }
+    }
 
     await ctx.telegram.deleteMessage(ctx.chat.id, processingMsg.message_id);
     await ctx.replyWithMarkdown(
@@ -227,18 +244,16 @@ bot.on(message("photo"), async (ctx) => {
     );
   } catch (err) {
     logger.error({ err }, "Image analysis error");
-    await ctx.telegram.deleteMessage(ctx.chat.id, processingMsg.message_id);
-    await ctx.reply(
-      "❌ Rasmni tahlil qilishda xato yuz berdi. Iltimos, qaytadan urinib ko'ring.",
-    );
+    try { await ctx.telegram.deleteMessage(ctx.chat.id, processingMsg.message_id); } catch {}
+    await ctx.reply("❌ Rasmni tahlil qilishda xato yuz berdi. Iltimos, qaytadan urinib ko'ring.");
   }
 });
 
 bot.on(message("text"), async (ctx) => {
-  const user = await getOrCreateUser(ctx);
-  if (!user) {
-    await ctx.reply("Xato yuz berdi. Iltimos, qaytadan urinib ko'ring.");
-    return;
+  try {
+    await getOrCreateUser(ctx);
+  } catch (err) {
+    logger.warn({ err }, "getOrCreateUser failed in text handler");
   }
 
   const text = ctx.message.text;
@@ -252,7 +267,7 @@ bot.on(message("text"), async (ctx) => {
     await ctx.replyWithMarkdown(answer);
   } catch (err) {
     logger.error({ err }, "Text analysis error");
-    await ctx.telegram.deleteMessage(ctx.chat.id, processingMsg.message_id);
+    try { await ctx.telegram.deleteMessage(ctx.chat.id, processingMsg.message_id); } catch {}
     await ctx.reply("❌ Xato yuz berdi. Iltimos, qaytadan urinib ko'ring.");
   }
 });
