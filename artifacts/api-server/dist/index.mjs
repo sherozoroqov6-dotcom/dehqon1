@@ -80891,12 +80891,10 @@ function fixResponseChunkedTransferBadEnding(request, errorCallback) {
 
 // src/bot/agro-bot.ts
 var BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-if (!BOT_TOKEN) {
-  throw new Error("TELEGRAM_BOT_TOKEN is required");
-}
+if (!BOT_TOKEN) throw new Error("TELEGRAM_BOT_TOKEN is required");
 var bot = new import_telegraf.Telegraf(BOT_TOKEN);
 var VISION_MODEL = process.env.VISION_MODEL ?? "meta-llama/llama-4-scout-17b-16e-instruct";
-var TEXT_MODEL = process.env.TEXT_MODEL ?? "llama-3.1-8b-instant";
+var TEXT_MODEL = process.env.TEXT_MODEL ?? "llama-3.3-70b-versatile";
 async function getOrCreateUser(ctx) {
   if (!db) return null;
   const from = ctx.from;
@@ -80912,7 +80910,7 @@ async function getOrCreateUser(ctx) {
     }).returning();
     return created;
   } catch (err) {
-    logger.warn({ err }, "DB error in getOrCreateUser \u2014 continuing without user record");
+    logger.warn({ err }, "DB error in getOrCreateUser");
     return null;
   }
 }
@@ -80920,38 +80918,25 @@ async function analyzeImageWithAI(imageBuffer) {
   const base64Image = imageBuffer.toString("base64");
   const response = await openai.chat.completions.create({
     model: VISION_MODEL,
-    max_tokens: 1024,
+    max_tokens: 800,
     messages: [
       {
         role: "system",
-        content: `Siz tajribali agronomiksiz. Foydalanuvchi o'simlik yoki ekin rasmini yuboradi. Siz rasmni tahlil qilib, quyidagi ma'lumotlarni berasiz:
-1. Ekin turi (agar aniqlanmasa, "noma'lum" yozing)
-2. Kasallik yoki zararkunanda borligini aniqlang
-3. Kasallik darajasi: "yengil", "o'rtacha", yoki "og'ir" (kasallik bo'lmasa null)
-4. Batafsil tavsiya va davolash yo'llari
-
-Javobni FAQAT JSON formatida bering:
+        content: `Siz O'zbekiston agronomisiz. Foydalanuvchi o'simlik yoki ekin rasmini yuboradi.
+Rasmni tahlil qiling va FAQAT quyidagi JSON formatida javob bering (boshqa hech narsa yozmang):
 {
-  "cropType": "...",
-  "diseaseDetected": true/false,
-  "severity": "yengil"/"o'rtacha"/"og'ir"/null,
-  "diagnosis": "...",
-  "recommendations": ["..."]
+  "cropType": "ekin turi yoki noma'lum",
+  "diseaseDetected": true yoki false,
+  "severity": "yengil" yoki "o'rtacha" yoki "og'ir" yoki null,
+  "diagnosis": "kasallik/muammo tavsifi (1-2 jumla)",
+  "recommendations": ["1-tavsiya", "2-tavsiya", "3-tavsiya"]
 }`
       },
       {
         role: "user",
         content: [
-          {
-            type: "image_url",
-            image_url: {
-              url: `data:image/jpeg;base64,${base64Image}`
-            }
-          },
-          {
-            type: "text",
-            text: "Iltimos, bu o'simlik/ekin rasmini tahlil qiling."
-          }
+          { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}` } },
+          { type: "text", text: "Bu o'simlik rasmini tahlil qiling." }
         ]
       }
     ]
@@ -80960,79 +80945,61 @@ Javobni FAQAT JSON formatida bering:
   let parsed = {};
   try {
     const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      parsed = JSON.parse(jsonMatch[0]);
-    }
+    if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
   } catch {
-    logger.warn("Could not parse AI JSON response, using raw text");
+    logger.warn("Could not parse AI JSON response");
   }
   const diseaseDetected = parsed.diseaseDetected ?? false;
   const cropType = parsed.cropType ?? null;
   const severity = parsed.severity ?? null;
-  let analysisText = "";
-  if (parsed.diagnosis) {
-    analysisText += `Tashxis: ${parsed.diagnosis}
-
+  let analysisText = "\u{1F52C} Tahlil natijalari:\n\n";
+  if (cropType) analysisText += `\u{1F331} Ekin turi: ${cropType}
 `;
-  }
-  if (parsed.cropType) {
-    analysisText += `Ekin turi: ${parsed.cropType}
+  if (parsed.diagnosis) analysisText += `\u{1F4CB} Tashxis: ${parsed.diagnosis}
 `;
-  }
   if (diseaseDetected) {
-    analysisText += `Kasallik aniqlandi: Ha
+    analysisText += `\u26A0\uFE0F Kasallik aniqlandi: Ha
 `;
     if (severity) {
-      const severityMap = {
-        yengil: "Yengil",
-        "o'rtacha": "O'rtacha",
-        "og'ir": "Og'ir"
-      };
-      analysisText += `Darajasi: ${severityMap[severity] ?? severity}
+      const map2 = { yengil: "\u{1F7E1} Yengil", "o'rtacha": "\u{1F7E0} O'rtacha", "og'ir": "\u{1F534} Og'ir" };
+      analysisText += `\u{1F4CA} Darajasi: ${map2[severity] ?? severity}
 `;
     }
   } else {
-    analysisText += `Kasallik: Aniqlanmadi
+    analysisText += `\u2705 Kasallik: Aniqlanmadi
 `;
   }
-  if (parsed.recommendations && parsed.recommendations.length > 0) {
+  if (parsed.recommendations?.length) {
     analysisText += `
-Tavsiyalar:
+\u{1F4A1} Tavsiyalar:
 `;
-    parsed.recommendations.forEach((rec, i2) => {
-      analysisText += `${i2 + 1}. ${rec}
+    parsed.recommendations.slice(0, 4).forEach((r2, i2) => {
+      analysisText += `${i2 + 1}. ${r2}
 `;
     });
   }
-  return {
-    analysisText: analysisText || content,
-    diseaseDetected,
-    cropType,
-    severity
-  };
+  return { analysisText: analysisText || content, diseaseDetected, cropType, severity };
 }
 async function analyzeTextWithAI(question) {
   const response = await openai.chat.completions.create({
     model: TEXT_MODEL,
-    max_tokens: 800,
+    max_tokens: 500,
+    temperature: 0.7,
     messages: [
       {
         role: "system",
-        content: `Siz tajribali O'zbekiston agronomiksiz. Foydalanuvchilarga qishloq xo'jaligi bo'yicha savollariga aniq, qisqa va foydali javoblar bering. O'zbek tilida yozing. Agar savol qishloq xo'jaligiga aloqador bo'lmasa, faqat qishloq xo'jaligi bo'yicha yordam bera olishingizni ayting.`
+        content: `Siz O'zbekiston agronomisiz. Qishloq xo'jaligi savollariga O'zbek tilida aniq, qisqa (3-5 jumla) javob bering. Bir fikrni bir marta ayting, takrorlamang. Savol qishloq xo'jaligiga aloqasiz bo'lsa, faqat qishloq xo'jaligi bo'yicha yordam bera olishingizni ayting.`
       },
-      {
-        role: "user",
-        content: question
-      }
+      { role: "user", content: question }
     ]
   });
-  return response.choices[0]?.message?.content ?? "Kechirasiz, javob olishda xato yuz berdi.";
+  return response.choices[0]?.message?.content?.trim() ?? "Kechirasiz, javob olishda xato yuz berdi.";
 }
 bot.start(async (ctx) => {
   try {
     await getOrCreateUser(ctx);
   } catch (err) {
-    logger.warn({ err }, "getOrCreateUser failed in /start \u2014 continuing");
+    logger.warn({ err }, "getOrCreateUser failed");
   }
   await ctx.reply(
     "\u{1F33E} AI Agronom Botiga xush kelibsiz!\n\nMen sizga qishloq xo'jaligi bo'yicha yordam beraman:\n\n\u{1F4F8} Rasm tahlili \u2014 O'simlik rasmini yuboring, kasallik va muammolarni aniqlayman\n\u{1F4AC} Savol-javob \u2014 Qishloq xo'jaligi bo'yicha istalgan savolga javob beraman\n\nBoshlash uchun rasm yuboring yoki savol yozing! \u{1F331}"
@@ -81040,7 +81007,7 @@ bot.start(async (ctx) => {
 });
 bot.help(async (ctx) => {
   await ctx.reply(
-    "\u{1F33E} AI Agronom Bot \u2014 Yordam\n\nBuyruqlar:\n/start \u2014 Botni ishga tushirish\n/help \u2014 Yordam\n\nFoydalanish:\n\u{1F4F8} O'simlik rasmini yuboring \u2014 kasallik tahlili\n\u{1F4AC} Savol yozing \u2014 maslahat oling\n\nTahlil qilinadigan narsalar:\n\u2022 Kasalliklar va zararkunandalar\n\u2022 Ekin holati va sog'lig'i\n\u2022 Tuproq va suv muammolari\n\u2022 O'g'it va parvarish tavsiylari"
+    "\u{1F33E} AI Agronom Bot \u2014 Yordam\n\nBuyruqlar:\n/start \u2014 Botni ishga tushirish\n/help \u2014 Yordam\n\nFoydalanish:\n\u{1F4F8} O'simlik rasmini yuboring \u2014 kasallik tahlili\n\u{1F4AC} Savol yozing \u2014 maslahat oling"
   );
 });
 bot.on((0, import_filters.message)("photo"), async (ctx) => {
@@ -81048,9 +81015,9 @@ bot.on((0, import_filters.message)("photo"), async (ctx) => {
   try {
     user = await getOrCreateUser(ctx);
   } catch (err) {
-    logger.warn({ err }, "getOrCreateUser failed in photo handler");
+    logger.warn({ err }, "getOrCreateUser failed");
   }
-  const processingMsg = await ctx.reply("\u23F3 Rasm tahlil qilinmoqda, iltimos kuting...");
+  const processingMsg = await ctx.reply("\u23F3 Rasm tahlil qilinmoqda...");
   try {
     const photos = ctx.message.photo;
     const largestPhoto = photos[photos.length - 1];
@@ -81069,27 +81036,25 @@ bot.on((0, import_filters.message)("photo"), async (ctx) => {
           severity: result.severity
         });
       } catch (err) {
-        logger.warn({ err }, "Failed to save analysis to DB");
+        logger.warn({ err }, "Failed to save analysis");
       }
     }
     await ctx.telegram.deleteMessage(ctx.chat.id, processingMsg.message_id);
-    await ctx.reply(
-      "\u{1F52C} Tahlil natijalari:\n\n" + result.analysisText + "\n---\nYana rasm yuboring yoki savol bering \u{1F331}"
-    );
+    await ctx.reply(result.analysisText + "\n\nYana rasm yuboring yoki savol bering \u{1F331}");
   } catch (err) {
     logger.error({ err }, "Image analysis error");
     try {
       await ctx.telegram.deleteMessage(ctx.chat.id, processingMsg.message_id);
     } catch {
     }
-    await ctx.reply("\u274C Rasmni tahlil qilishda xato yuz berdi. Iltimos, qaytadan urinib ko'ring.");
+    await ctx.reply("\u274C Rasmni tahlil qilishda xato yuz berdi. Qaytadan urinib ko'ring.");
   }
 });
 bot.on((0, import_filters.message)("text"), async (ctx) => {
   try {
     await getOrCreateUser(ctx);
   } catch (err) {
-    logger.warn({ err }, "getOrCreateUser failed in text handler");
+    logger.warn({ err }, "getOrCreateUser failed");
   }
   const text2 = ctx.message.text;
   if (text2.startsWith("/")) return;
@@ -81104,7 +81069,7 @@ bot.on((0, import_filters.message)("text"), async (ctx) => {
       await ctx.telegram.deleteMessage(ctx.chat.id, processingMsg.message_id);
     } catch {
     }
-    await ctx.reply("\u274C Xato yuz berdi. Iltimos, qaytadan urinib ko'ring.");
+    await ctx.reply("\u274C Xato yuz berdi. Qaytadan urinib ko'ring.");
   }
 });
 bot.catch((err, ctx) => {
