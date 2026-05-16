@@ -6,15 +6,21 @@ const apiKey =
   process.env.OPENAI_API_KEY ||
   process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
 
-const baseURL =
-  process.env.AI_INTEGRATIONS_OPENAI_BASE_URL ||
-  "https://api.openai.com/v1";
-
 if (!apiKey) {
   throw new Error(
     "OPENAI_API_KEY (or AI_INTEGRATIONS_OPENAI_API_KEY) must be set.",
   );
 }
+
+const isGroqKey = apiKey.startsWith("gsk_");
+const defaultBaseURL = isGroqKey
+  ? "https://api.groq.com/openai/v1"
+  : "https://api.openai.com/v1";
+
+const baseURL =
+  process.env.AI_INTEGRATIONS_OPENAI_BASE_URL ||
+  process.env.OPENAI_BASE_URL ||
+  defaultBaseURL;
 
 export const openai = new OpenAI({ apiKey, baseURL });
 
@@ -38,24 +44,18 @@ export async function editImages(
 ): Promise<Buffer> {
   const images = await Promise.all(
     imageFiles.map((file) =>
-      toFile(fs.createReadStream(file), file, {
-        type: "image/png",
-      })
+      toFile(fs.createReadStream(file), file, { type: "image/png" })
     )
   );
-
   const response = await openai.images.edit({
     model: "gpt-image-1",
     image: images,
     prompt,
   });
-
   const imageBase64 = response.data[0]?.b64_json ?? "";
   const imageBytes = Buffer.from(imageBase64, "base64");
-
   if (outputPath) {
     fs.writeFileSync(outputPath, imageBytes);
   }
-
   return imageBytes;
 }

@@ -79194,8 +79194,8 @@ var OpenAI = class {
     this.apiKey = token;
     return true;
   }
-  buildURL(path2, query, defaultBaseURL) {
-    const baseURL3 = !__classPrivateFieldGet(this, _OpenAI_instances, "m", _OpenAI_baseURLOverridden).call(this) && defaultBaseURL || this.baseURL;
+  buildURL(path2, query, defaultBaseURL3) {
+    const baseURL3 = !__classPrivateFieldGet(this, _OpenAI_instances, "m", _OpenAI_baseURLOverridden).call(this) && defaultBaseURL3 || this.baseURL;
     const url2 = isAbsoluteURL(path2) ? new URL(path2) : new URL(baseURL3 + (baseURL3.endsWith("/") && path2.startsWith("/") ? path2.slice(1) : path2));
     const defaultQuery = this.defaultQuery();
     const pathQuery = Object.fromEntries(url2.searchParams);
@@ -79455,8 +79455,8 @@ var OpenAI = class {
   }
   async buildRequest(inputOptions, { retryCount = 0 } = {}) {
     const options = { ...inputOptions };
-    const { method, path: path2, query, defaultBaseURL } = options;
-    const url2 = this.buildURL(path2, query, defaultBaseURL);
+    const { method, path: path2, query, defaultBaseURL: defaultBaseURL3 } = options;
+    const url2 = this.buildURL(path2, query, defaultBaseURL3);
     if ("timeout" in options)
       validatePositiveInteger("timeout", options.timeout);
     options.timeout = options.timeout ?? this.timeout;
@@ -79588,22 +79588,26 @@ OpenAI.Videos = Videos;
 
 // ../../lib/integrations-openai-ai-server/src/client.ts
 var apiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
-var baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || "https://api.openai.com/v1";
 if (!apiKey) {
   throw new Error(
     "OPENAI_API_KEY (or AI_INTEGRATIONS_OPENAI_API_KEY) must be set."
   );
 }
+var isGroqKey = apiKey.startsWith("gsk_");
+var defaultBaseURL = isGroqKey ? "https://api.groq.com/openai/v1" : "https://api.openai.com/v1";
+var baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || process.env.OPENAI_BASE_URL || defaultBaseURL;
 var openai = new OpenAI({ apiKey, baseURL });
 
 // ../../lib/integrations-openai-ai-server/src/image/client.ts
 var apiKey2 = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
-var baseURL2 = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || "https://api.openai.com/v1";
 if (!apiKey2) {
   throw new Error(
     "OPENAI_API_KEY (or AI_INTEGRATIONS_OPENAI_API_KEY) must be set."
   );
 }
+var isGroqKey2 = apiKey2.startsWith("gsk_");
+var defaultBaseURL2 = isGroqKey2 ? "https://api.groq.com/openai/v1" : "https://api.openai.com/v1";
+var baseURL2 = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || process.env.OPENAI_BASE_URL || defaultBaseURL2;
 var openai2 = new OpenAI({ apiKey: apiKey2, baseURL: baseURL2 });
 
 // ../../node_modules/.pnpm/node-fetch@3.3.2/node_modules/node-fetch/src/index.js
