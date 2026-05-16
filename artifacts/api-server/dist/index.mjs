@@ -79019,7 +79019,7 @@ var OpenAI = class {
    * @param {Record<string, string | undefined>} opts.defaultQuery - Default query parameters to include with every request to the API.
    * @param {boolean} [opts.dangerouslyAllowBrowser=false] - By default, client-side use of this library is not allowed, as it risks exposing your secret API credentials to attackers.
    */
-  constructor({ baseURL = readEnv("OPENAI_BASE_URL"), apiKey = readEnv("OPENAI_API_KEY") ?? null, adminAPIKey = readEnv("OPENAI_ADMIN_KEY") ?? null, organization = readEnv("OPENAI_ORG_ID") ?? null, project = readEnv("OPENAI_PROJECT_ID") ?? null, webhookSecret = readEnv("OPENAI_WEBHOOK_SECRET") ?? null, workloadIdentity, ...opts } = {}) {
+  constructor({ baseURL: baseURL2 = readEnv("OPENAI_BASE_URL"), apiKey: apiKey2 = readEnv("OPENAI_API_KEY") ?? null, adminAPIKey = readEnv("OPENAI_ADMIN_KEY") ?? null, organization = readEnv("OPENAI_ORG_ID") ?? null, project = readEnv("OPENAI_PROJECT_ID") ?? null, webhookSecret = readEnv("OPENAI_WEBHOOK_SECRET") ?? null, workloadIdentity, ...opts } = {}) {
     _OpenAI_instances.add(this);
     _OpenAI_encoder.set(this, void 0);
     this.completions = new Completions2(this);
@@ -79046,19 +79046,19 @@ var OpenAI = class {
     this.skills = new Skills(this);
     this.videos = new Videos(this);
     const options = {
-      apiKey,
+      apiKey: apiKey2,
       adminAPIKey,
       organization,
       project,
       webhookSecret,
       workloadIdentity,
       ...opts,
-      baseURL: baseURL || `https://api.openai.com/v1`
+      baseURL: baseURL2 || `https://api.openai.com/v1`
     };
-    if (apiKey && workloadIdentity) {
+    if (apiKey2 && workloadIdentity) {
       throw new OpenAIError("The `apiKey` and `workloadIdentity` options are mutually exclusive");
     }
-    if (!apiKey && !adminAPIKey && !workloadIdentity) {
+    if (!apiKey2 && !adminAPIKey && !workloadIdentity) {
       throw new OpenAIError("Missing credentials. Please pass an `apiKey`, `workloadIdentity`, `adminAPIKey`, or set the `OPENAI_API_KEY` or `OPENAI_ADMIN_KEY` environment variable.");
     }
     if (!options.dangerouslyAllowBrowser && isRunningInBrowser()) {
@@ -79089,7 +79089,7 @@ var OpenAI = class {
     if (workloadIdentity) {
       this._workloadIdentityAuth = new WorkloadIdentityAuth(workloadIdentity, this.fetch);
     }
-    this.apiKey = typeof apiKey === "string" ? apiKey : null;
+    this.apiKey = typeof apiKey2 === "string" ? apiKey2 : null;
     this.adminAPIKey = adminAPIKey;
     this.organization = organization;
     this.project = project;
@@ -79173,12 +79173,12 @@ var OpenAI = class {
     return APIError.generate(status, error40, message2, headers);
   }
   async _callApiKey() {
-    const apiKey = this._options.apiKey;
-    if (typeof apiKey !== "function")
+    const apiKey2 = this._options.apiKey;
+    if (typeof apiKey2 !== "function")
       return false;
     let token;
     try {
-      token = await apiKey();
+      token = await apiKey2();
     } catch (err) {
       if (err instanceof OpenAIError)
         throw err;
@@ -79195,8 +79195,8 @@ var OpenAI = class {
     return true;
   }
   buildURL(path2, query, defaultBaseURL) {
-    const baseURL = !__classPrivateFieldGet(this, _OpenAI_instances, "m", _OpenAI_baseURLOverridden).call(this) && defaultBaseURL || this.baseURL;
-    const url2 = isAbsoluteURL(path2) ? new URL(path2) : new URL(baseURL + (baseURL.endsWith("/") && path2.startsWith("/") ? path2.slice(1) : path2));
+    const baseURL2 = !__classPrivateFieldGet(this, _OpenAI_instances, "m", _OpenAI_baseURLOverridden).call(this) && defaultBaseURL || this.baseURL;
+    const url2 = isAbsoluteURL(path2) ? new URL(path2) : new URL(baseURL2 + (baseURL2.endsWith("/") && path2.startsWith("/") ? path2.slice(1) : path2));
     const defaultQuery = this.defaultQuery();
     const pathQuery = Object.fromEntries(url2.searchParams);
     if (!isEmptyObj(defaultQuery) || !isEmptyObj(pathQuery)) {
@@ -79587,20 +79587,14 @@ OpenAI.Skills = Skills;
 OpenAI.Videos = Videos;
 
 // ../../lib/integrations-openai-ai-server/src/client.ts
-if (!process.env.AI_INTEGRATIONS_OPENAI_BASE_URL) {
+var apiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+var baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || "https://api.openai.com/v1";
+if (!apiKey) {
   throw new Error(
-    "AI_INTEGRATIONS_OPENAI_BASE_URL must be set. Did you forget to provision the OpenAI AI integration?"
+    "OPENAI_API_KEY (or AI_INTEGRATIONS_OPENAI_API_KEY) must be set."
   );
 }
-if (!process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
-  throw new Error(
-    "AI_INTEGRATIONS_OPENAI_API_KEY must be set. Did you forget to provision the OpenAI AI integration?"
-  );
-}
-var openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL
-});
+var openai = new OpenAI({ apiKey, baseURL });
 
 // ../../lib/integrations-openai-ai-server/src/image/client.ts
 if (!process.env.AI_INTEGRATIONS_OPENAI_BASE_URL) {
@@ -80905,6 +80899,8 @@ if (!BOT_TOKEN) {
   throw new Error("TELEGRAM_BOT_TOKEN is required");
 }
 var bot = new import_telegraf.Telegraf(BOT_TOKEN);
+var VISION_MODEL = process.env.VISION_MODEL ?? "meta-llama/llama-4-scout-17b-16e-instruct";
+var TEXT_MODEL = process.env.TEXT_MODEL ?? "llama-3.1-8b-instant";
 async function getOrCreateUser(ctx) {
   if (!db) return null;
   const from = ctx.from;
@@ -80927,7 +80923,7 @@ async function getOrCreateUser(ctx) {
 async function analyzeImageWithAI(imageBuffer) {
   const base64Image = imageBuffer.toString("base64");
   const response = await openai.chat.completions.create({
-    model: "gpt-4o",
+    model: VISION_MODEL,
     max_tokens: 1024,
     messages: [
       {
@@ -80979,33 +80975,33 @@ Javobni FAQAT JSON formatida bering:
   const severity = parsed.severity ?? null;
   let analysisText = "";
   if (parsed.diagnosis) {
-    analysisText += `\u{1F4CB} *Tashxis:* ${parsed.diagnosis}
+    analysisText += `Tashxis: ${parsed.diagnosis}
 
 `;
   }
   if (parsed.cropType) {
-    analysisText += `\u{1F331} *Ekin turi:* ${parsed.cropType}
+    analysisText += `Ekin turi: ${parsed.cropType}
 `;
   }
   if (diseaseDetected) {
-    analysisText += `\u26A0\uFE0F *Kasallik aniqlandi:* Ha
+    analysisText += `Kasallik aniqlandi: Ha
 `;
     if (severity) {
       const severityMap = {
-        yengil: "\u{1F7E1} Yengil",
-        "o'rtacha": "\u{1F7E0} O'rtacha",
-        "og'ir": "\u{1F534} Og'ir"
+        yengil: "Yengil",
+        "o'rtacha": "O'rtacha",
+        "og'ir": "Og'ir"
       };
-      analysisText += `\u{1F4CA} *Darajasi:* ${severityMap[severity] ?? severity}
+      analysisText += `Darajasi: ${severityMap[severity] ?? severity}
 `;
     }
   } else {
-    analysisText += `\u2705 *Kasallik:* Aniqlanmadi
+    analysisText += `Kasallik: Aniqlanmadi
 `;
   }
   if (parsed.recommendations && parsed.recommendations.length > 0) {
     analysisText += `
-\u{1F4A1} *Tavsiyalar:*
+Tavsiyalar:
 `;
     parsed.recommendations.forEach((rec, i2) => {
       analysisText += `${i2 + 1}. ${rec}
@@ -81021,7 +81017,7 @@ Javobni FAQAT JSON formatida bering:
 }
 async function analyzeTextWithAI(question) {
   const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: TEXT_MODEL,
     max_tokens: 800,
     messages: [
       {
@@ -81042,34 +81038,13 @@ bot.start(async (ctx) => {
   } catch (err) {
     logger.warn({ err }, "getOrCreateUser failed in /start \u2014 continuing");
   }
-  await ctx.replyWithMarkdown(
-    `\u{1F33E} *AI Agronom Botiga xush kelibsiz!*
-
-Men sizga qishloq xo'jaligi bo'yicha yordam beraman:
-
-\u{1F4F8} *Rasm tahlili* \u2014 O'simlik rasmini yuboring, kasallik va muammolarni aniqlayman
-\u{1F4AC} *Savol-javob* \u2014 Qishloq xo'jaligi bo'yicha istalgan savolga javob beraman
-
-Boshlash uchun rasm yuboring yoki savol yozing! \u{1F331}`
+  await ctx.reply(
+    "\u{1F33E} AI Agronom Botiga xush kelibsiz!\n\nMen sizga qishloq xo'jaligi bo'yicha yordam beraman:\n\n\u{1F4F8} Rasm tahlili \u2014 O'simlik rasmini yuboring, kasallik va muammolarni aniqlayman\n\u{1F4AC} Savol-javob \u2014 Qishloq xo'jaligi bo'yicha istalgan savolga javob beraman\n\nBoshlash uchun rasm yuboring yoki savol yozing! \u{1F331}"
   );
 });
 bot.help(async (ctx) => {
-  await ctx.replyWithMarkdown(
-    `\u{1F33E} *AI Agronom Bot \u2014 Yordam*
-
-*Buyruqlar:*
-/start \u2014 Botni ishga tushirish
-/help \u2014 Yordam
-
-*Foydalanish:*
-\u2022 \u{1F4F8} O'simlik rasmini yuboring \u2014 kasallik tahlili
-\u2022 \u{1F4AC} Savol yozing \u2014 maslahat oling
-
-*Tahlil qilinadigan narsalar:*
-\u2022 Kasalliklar va zararkunandalar
-\u2022 Ekin holati va sog'lig'i
-\u2022 Tuproq va suv muammolari
-\u2022 O'g'it va parvarish tavsiylari`
+  await ctx.reply(
+    "\u{1F33E} AI Agronom Bot \u2014 Yordam\n\nBuyruqlar:\n/start \u2014 Botni ishga tushirish\n/help \u2014 Yordam\n\nFoydalanish:\n\u{1F4F8} O'simlik rasmini yuboring \u2014 kasallik tahlili\n\u{1F4AC} Savol yozing \u2014 maslahat oling\n\nTahlil qilinadigan narsalar:\n\u2022 Kasalliklar va zararkunandalar\n\u2022 Ekin holati va sog'lig'i\n\u2022 Tuproq va suv muammolari\n\u2022 O'g'it va parvarish tavsiylari"
   );
 });
 bot.on((0, import_filters.message)("photo"), async (ctx) => {
@@ -81102,13 +81077,8 @@ bot.on((0, import_filters.message)("photo"), async (ctx) => {
       }
     }
     await ctx.telegram.deleteMessage(ctx.chat.id, processingMsg.message_id);
-    await ctx.replyWithMarkdown(
-      `\u{1F52C} *Tahlil natijalari:*
-
-${result.analysisText}
-
----
-_Yana rasm yuboring yoki savol bering_ \u{1F331}`
+    await ctx.reply(
+      "\u{1F52C} Tahlil natijalari:\n\n" + result.analysisText + "\n---\nYana rasm yuboring yoki savol bering \u{1F331}"
     );
   } catch (err) {
     logger.error({ err }, "Image analysis error");
@@ -81131,7 +81101,7 @@ bot.on((0, import_filters.message)("text"), async (ctx) => {
   try {
     const answer = await analyzeTextWithAI(text2);
     await ctx.telegram.deleteMessage(ctx.chat.id, processingMsg.message_id);
-    await ctx.replyWithMarkdown(answer);
+    await ctx.reply(answer);
   } catch (err) {
     logger.error({ err }, "Text analysis error");
     try {
